@@ -47,12 +47,12 @@ void process_piece_placement (board* board, const char* FEN) {
             continue;
         else if ('A' <= c && c <= 'Z') {
             switch(c) {
-                case 'K': set_piece(&board->white_king   [index[0][0]], (char[2]){file, rank}, c); ++index[0][0]; break;
-                case 'Q': set_piece(&board->white_queen  [index[0][1]], (char[2]){file, rank}, c); ++index[0][1]; break;
-                case 'R': set_piece(&board->white_rook   [index[0][2]], (char[2]){file, rank}, c); ++index[0][2]; break;
-                case 'B': set_piece(&board->white_bishop [index[0][3]], (char[2]){file, rank}, c); ++index[0][3]; break;
-                case 'N': set_piece(&board->white_knight [index[0][4]], (char[2]){file, rank}, c); ++index[0][4]; break;
-                case 'P': set_piece(&board->white_pawn   [index[0][5]], (char[2]){file, rank}, c); ++index[0][5]; break;
+                case 'K': set_piece(&board->white_king   [index[0][0]], (char[2]){file, rank}); ++index[0][0]; break;
+                case 'Q': set_piece(&board->white_queen  [index[0][1]], (char[2]){file, rank}); ++index[0][1]; break;
+                case 'R': set_piece(&board->white_rook   [index[0][2]], (char[2]){file, rank}); ++index[0][2]; break;
+                case 'B': set_piece(&board->white_bishop [index[0][3]], (char[2]){file, rank}); ++index[0][3]; break;
+                case 'N': set_piece(&board->white_knight [index[0][4]], (char[2]){file, rank}); ++index[0][4]; break;
+                case 'P': set_piece(&board->white_pawn   [index[0][5]], (char[2]){file, rank}); ++index[0][5]; break;
 
                 default: exception("invalid FEN string", __FILE__, __LINE__);
             }
@@ -60,12 +60,12 @@ void process_piece_placement (board* board, const char* FEN) {
         }
         else if ('a' <= c && c <= 'z') {
             switch(c) {
-                case 'k': set_piece(&board->black_king   [index[1][0]], (char[2]){file, rank}, c); ++index[1][0]; break;
-                case 'q': set_piece(&board->black_queen  [index[1][1]], (char[2]){file, rank}, c); ++index[1][1]; break;
-                case 'r': set_piece(&board->black_rook   [index[1][2]], (char[2]){file, rank}, c); ++index[1][2]; break;
-                case 'b': set_piece(&board->black_bishop [index[1][3]], (char[2]){file, rank}, c); ++index[1][3]; break;
-                case 'n': set_piece(&board->black_knight [index[1][4]], (char[2]){file, rank}, c); ++index[1][4]; break;
-                case 'p': set_piece(&board->black_pawn   [index[1][5]], (char[2]){file, rank}, c); ++index[1][5]; break;
+                case 'k': set_piece(&board->black_king   [index[1][0]], (char[2]){file, rank}); ++index[1][0]; break;
+                case 'q': set_piece(&board->black_queen  [index[1][1]], (char[2]){file, rank}); ++index[1][1]; break;
+                case 'r': set_piece(&board->black_rook   [index[1][2]], (char[2]){file, rank}); ++index[1][2]; break;
+                case 'b': set_piece(&board->black_bishop [index[1][3]], (char[2]){file, rank}); ++index[1][3]; break;
+                case 'n': set_piece(&board->black_knight [index[1][4]], (char[2]){file, rank}); ++index[1][4]; break;
+                case 'p': set_piece(&board->black_pawn   [index[1][5]], (char[2]){file, rank}); ++index[1][5]; break;
 
                 default: exception("invalid FEN string", __FILE__, __LINE__);
             }
@@ -109,31 +109,61 @@ void process_FEN (board* board, const char* FEN) {
     process_piece_placement(board, piece_placement);
 }
 
-void board_constructor (board* board) {
-    const char* startposition_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+void board_constructor (board* board, const char* FEN) {
+    for (int i = 0; i < 1; ++i) {
+        board->white_king[i].position = 0;
+        board->black_king[i].position = 0;
+        board->white_king[i].symbol = 'K';
+        board->black_king[i].symbol = 'k';
+    }
 
-    process_FEN(board, startposition_FEN);
+    for (int i = 0; i < 1; ++i) {
+        board->white_queen[i].position = 0;
+        board->black_queen[i].position = 0;
+        board->white_queen[i].symbol = 'Q';
+        board->black_queen[i].symbol = 'q';
+    }
+
+    for (int i = 0; i < 2; ++i) {
+        board->white_rook[i].position = 0;
+        board->black_rook[i].position = 0;
+        board->white_rook[i].symbol = 'R';
+        board->black_rook[i].symbol = 'r';
+    }
+
+    for (int i = 0; i < 2; ++i) {
+        board->white_bishop[i].position = 0;
+        board->black_bishop[i].position = 0;
+        board->white_bishop[i].symbol = 'B';
+        board->black_bishop[i].symbol = 'b';
+    }
+
+    for (int i = 0; i < 2; ++i) {
+        board->white_knight[i].position = 0;
+        board->black_knight[i].position = 0;
+        board->white_knight[i].symbol = 'N';
+        board->black_knight[i].symbol = 'n';
+    }
+
+    for (int i = 0; i < 8; ++i) {
+        board->white_pawn[i].position = 0;
+        board->black_pawn[i].position = 0;
+        board->white_pawn[i].symbol = 'P';
+        board->black_pawn[i].symbol = 'p';
+    }
+
+    process_FEN(board, FEN);
 }
 
-void __display_board_set (char pretty_board[8][8], piece* piece) {
-    char* coordinate = get_position(piece);
-    if (('a' <= coordinate[0]) && (coordinate[0] <= 'h') && ('1' <= coordinate[1]) && (coordinate[1] <= '8')) {
-        int file = coordinate[0] - 'a';
-        int rank = coordinate[1] - '1';
-        pretty_board[rank][file] = piece->symbol;
-    }
-    else if (coordinate[0] == 'a' && coordinate[1] == '9') {
-        // piece is no longer present on the board
-    }
-    else
-        exception("invalid coordinate", __FILE__, __LINE__);
+void __display_board_set (char* pretty_board, piece* piece) {
+    int ctz = count_trailing_zeroes(piece->position);
+    pretty_board[ctz] = piece->symbol;
 }
 
 void display_board (board* board) {
-    char pretty_board[8][8];
-    for (int i = 0; i < 8; ++i)
-        for (int j = 0; j < 8; ++j)
-            pretty_board[i][j] = '-';
+    char pretty_board[64];
+    for (int i = 0; i < 64; ++i)
+        pretty_board[i] = '-';
     
     for (int i = 0; i < 1; ++i) {
         __display_board_set(pretty_board, &board->white_king[i]);
@@ -165,10 +195,10 @@ void display_board (board* board) {
         __display_board_set(pretty_board, &board->black_pawn[i]);
     }
 
-    for (int i = 0; i < 8; ++i) {
-        for (int j = 0; j < 8; ++j)
-            printf("%c ", pretty_board[i][j]);
-        printf("\n");
+    for (int i = 0; i < 64; ++i) {
+        printf("%c ", pretty_board[i]);
+        if ((i + 1) % 8 == 0)
+            printf("\n");
     }
 }
 

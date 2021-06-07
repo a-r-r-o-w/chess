@@ -20,10 +20,7 @@ typedef struct {
     position position;
 } piece;
 
-void set_piece (piece* piece, char coordinate[2], char symbol) {
-    piece->position = 0;
-    piece->symbol = '*';
-
+void set_piece (piece* piece, char coordinate[2]) {
     int file = coordinate[0] - 'a';
     int rank = coordinate[1] - '1';
 
@@ -38,19 +35,6 @@ void set_piece (piece* piece, char coordinate[2], char symbol) {
     uint64_t mask = 1;
     mask <<= shift;
     piece->position |= mask;
-    piece->symbol = symbol;
-}
-
-char* get_position (piece* piece) {
-    int ctz = count_trailing_zeroes(piece->position);
-
-    char rank = 7 - ctz / 8;
-    char file = ctz % 8;
-    
-    rank += '1';
-    file += 'a';
-
-    return (char[2]){file, rank};
 }
 
 #endif
