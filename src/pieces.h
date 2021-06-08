@@ -7,22 +7,19 @@
 
 typedef uint64_t position;
 
-int count_trailing_zeroes (position position) {
-    int ctz = 0;
-    for (int bit = 0; bit < 64; ++bit, ++ctz)
-        if (position & (1ull << bit))
-            break;
-    return ctz;
-}
-
 typedef struct {
     char symbol;
     position position;
 } piece;
 
-void set_piece (piece* piece, char coordinate[2]) {
-    int file = coordinate[0] - 'a';
-    int rank = coordinate[1] - '1';
+void piece_constructor (piece* piece, char symbol) {
+    piece->position = 0;
+    piece->symbol = symbol;
+}
+
+void piece_set (piece* piece, char file, char rank) {
+    file -= 'a';
+    rank -= '1';
 
     int shift = 8 * (8 - rank - 1) + file;
 

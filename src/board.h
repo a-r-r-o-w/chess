@@ -1,95 +1,107 @@
 #ifndef chess_board_h
 #define chess_board_h
 
+#include "stdio.h"
+#include "stdbool.h"
+
 #include "exceptions.h"
 #include "pieces.h"
 
 typedef struct {
-    piece white_king   [1];
-    piece white_queen  [1];
-    piece white_bishop [2];
-    piece white_knight [2];
-    piece white_rook   [2];
-    piece white_pawn   [8];
+    // [16]: [K, Q, R, R, B, B, N, N, P, P, P, P, P, P, P, P]
+    // K: King
+    // Q: Queen
+    // R: Rook
+    // B: Bishop
+    // N: Knight
+    // P: Pawn
+    piece white[16];
+    piece black[16];
 
-    piece black_king   [1];
-    piece black_queen  [1];
-    piece black_bishop [2];
-    piece black_knight [2];
-    piece black_rook   [2];
-    piece black_pawn   [8];
-    
+    bool is_white_turn;
 } board;
 
-void process_piece_placement (board* board, const char* FEN) {
-    char rank = '8';
-    char file = 'a';
+// function prototypes ------------------------------------------------------------------------
 
-    int index[2][6];
-    /* index[x][y]: current index of piece y of color x
-        x = 0 -> white
-        x = 1 -> black
+void board_constructor (board*, const char*);
 
-        y = 0 -> king
-        y = 1 -> queen
-        y = 2 -> rook
-        y = 3 -> bishop
-        y = 4 -> knight
-        y = 5 -> pawn
-    */
+void parse_FEN                 (board*, const char*);
+void parse_FEN_piece_placement (board*, const char*);
 
-    for (int i = 0; i < 2; ++i) for (int j = 0; j < 6; ++j) index[i][j] = 0;
+void display_board (board*, bool);
 
-    for (int i = 0; FEN[i] != '\0'; ++i) {
-        char c = FEN[i];
-        
-        if (c == '/')
-            continue;
-        else if ('A' <= c && c <= 'Z') {
-            switch(c) {
-                case 'K': set_piece(&board->white_king   [index[0][0]], (char[2]){file, rank}); ++index[0][0]; break;
-                case 'Q': set_piece(&board->white_queen  [index[0][1]], (char[2]){file, rank}); ++index[0][1]; break;
-                case 'R': set_piece(&board->white_rook   [index[0][2]], (char[2]){file, rank}); ++index[0][2]; break;
-                case 'B': set_piece(&board->white_bishop [index[0][3]], (char[2]){file, rank}); ++index[0][3]; break;
-                case 'N': set_piece(&board->white_knight [index[0][4]], (char[2]){file, rank}); ++index[0][4]; break;
-                case 'P': set_piece(&board->white_pawn   [index[0][5]], (char[2]){file, rank}); ++index[0][5]; break;
+int  __count_trailing_zeroes (position);
+void __place_piece           (char*, piece*);
 
-                default: exception("invalid FEN string", __FILE__, __LINE__);
-            }
-            ++file;
-        }
-        else if ('a' <= c && c <= 'z') {
-            switch(c) {
-                case 'k': set_piece(&board->black_king   [index[1][0]], (char[2]){file, rank}); ++index[1][0]; break;
-                case 'q': set_piece(&board->black_queen  [index[1][1]], (char[2]){file, rank}); ++index[1][1]; break;
-                case 'r': set_piece(&board->black_rook   [index[1][2]], (char[2]){file, rank}); ++index[1][2]; break;
-                case 'b': set_piece(&board->black_bishop [index[1][3]], (char[2]){file, rank}); ++index[1][3]; break;
-                case 'n': set_piece(&board->black_knight [index[1][4]], (char[2]){file, rank}); ++index[1][4]; break;
-                case 'p': set_piece(&board->black_pawn   [index[1][5]], (char[2]){file, rank}); ++index[1][5]; break;
+// function definitions -----------------------------------------------------------------------
 
-                default: exception("invalid FEN string", __FILE__, __LINE__);
-            }
-            ++file;
-        }
-        else if ('1' <= c && c <= '8') {
-            file += c - '0';
-            if (file > 'h' + 1)
-                exception("invalid FEN string", __FILE__, __LINE__);
-        }
-        else
-            exception("invalid FEN string", __FILE__, __LINE__);
-        
-        if (file == 'i') {
-            file = 'a';
-            --rank;
-        }
-    }
+void board_constructor (board* board, const char* FEN) {
+    // assign kings, queens, rooks, bishops, knights and pawns their symbols for each color
 
-    if (file != 'a' && rank != '0')
-        exception("invalid FEN string", __FILE__, __LINE__);
+    piece_constructor(&board->white[0] , 'K');
+    piece_constructor(&board->white[1] , 'Q');
+    piece_constructor(&board->white[2] , 'R');
+    piece_constructor(&board->white[3] , 'R');
+    piece_constructor(&board->white[4] , 'B');
+    piece_constructor(&board->white[5] , 'B');
+    piece_constructor(&board->white[6] , 'N');
+    piece_constructor(&board->white[7] , 'N');
+    piece_constructor(&board->white[8] , 'P');
+    piece_constructor(&board->white[9] , 'P');
+    piece_constructor(&board->white[10], 'P');
+    piece_constructor(&board->white[11], 'P');
+    piece_constructor(&board->white[12], 'P');
+    piece_constructor(&board->white[13], 'P');
+    piece_constructor(&board->white[14], 'P');
+    piece_constructor(&board->white[15], 'P');
+
+    piece_constructor(&board->black[0] , 'k');
+    piece_constructor(&board->black[1] , 'q');
+    piece_constructor(&board->black[2] , 'r');
+    piece_constructor(&board->black[3] , 'r');
+    piece_constructor(&board->black[4] , 'b');
+    piece_constructor(&board->black[5] , 'b');
+    piece_constructor(&board->black[6] , 'n');
+    piece_constructor(&board->black[7] , 'n');
+    piece_constructor(&board->black[8] , 'p');
+    piece_constructor(&board->black[9] , 'p');
+    piece_constructor(&board->black[10], 'p');
+    piece_constructor(&board->black[11], 'p');
+    piece_constructor(&board->black[12], 'p');
+    piece_constructor(&board->black[13], 'p');
+    piece_constructor(&board->black[14], 'p');
+    piece_constructor(&board->black[15], 'p');
+
+    // Is it white's turn?
+    // Assumed yes, but original value is set after parsing FEN string
+    board->is_white_turn = true;
+
+    // parse the FEN string and set the board position
+    parse_FEN(board, FEN);
 }
 
-void process_FEN (board* board, const char* FEN) {
+// This does not validate the FEN string completely
+// Only a few easy checks are implemented. Validating a FEN string completely can be quite
+// a difficult task
+// It is assumed that the string passed is correct. If not, certain easily spottable mistakes
+// can be detected here
+void parse_FEN (board* board, const char* FEN) {
+
+    /* A FEN string is a group of 6 space-separated sub-strings that each hold some information
+       about a game of chess.
+
+       The first part is the piece placement ordering.
+       The second part is the color of the active player.
+       The third part is the availability of castling (KQkq)
+            - K denotes white can castle kingside and Q denotes white can castle queenside
+            - k denotes black can castle kingside and q denotes black can castle queenside
+       The fourth part denotes if an en-passant move is available. if not, it is set to '-'
+       The fifth part denotes number of halfmove cycles since the last capture (50-move rule)
+       The sixth part denotes number of full moves played. Incremented every time after black plays.
+
+       (https://www.wikiwand.com/en/Forsyth%E2%80%93Edwards_Notation)
+    */
+
     char piece_placement[100];
     // char active_color;
     // char castling[4];
@@ -106,100 +118,119 @@ void process_FEN (board* board, const char* FEN) {
     }
     piece_placement[index - offset] = '\0';
 
-    process_piece_placement(board, piece_placement);
+    parse_FEN_piece_placement(board, piece_placement);
 }
 
-void board_constructor (board* board, const char* FEN) {
-    for (int i = 0; i < 1; ++i) {
-        board->white_king[i].position = 0;
-        board->black_king[i].position = 0;
-        board->white_king[i].symbol = 'K';
-        board->black_king[i].symbol = 'k';
+void parse_FEN_piece_placement (board* board, const char* FEN) {
+    // FEN indexing starts from a8 and ends at h1
+    char rank = '8';
+    char file = 'a';
+
+    int K = 0, Q = 1, R = 2, B = 4, N = 6, P = 8;
+    int k = 0, q = 1, r = 2, b = 4, n = 6, p = 8;
+
+    for (int i = 0; FEN[i] != '\0'; ++i) {
+        char c = FEN[i];
+        
+        // '/' denotes the end of a file and that we should proceed to next rank
+        if (c == '/') {
+            --rank;
+            file = 'a';
+        }
+        
+        // the only valid files are 'a'-'h'
+        else if (file > 'h')
+            exception("invalid FEN string", __FILE__, __LINE__);
+        
+        // capital letters are used to denote the white pieces
+        // valid capital letters: K (king), Q (queen), R (rook), B (bishop), N (knight), P (pawn)
+        else if ('A' <= c && c <= 'Z') {
+            switch(c) {
+                case 'K': piece_set(&board->white[K++], file, rank); break;
+                case 'Q': piece_set(&board->white[Q++], file, rank); break;
+                case 'R': piece_set(&board->white[R++], file, rank); break;
+                case 'B': piece_set(&board->white[B++], file, rank); break;
+                case 'N': piece_set(&board->white[N++], file, rank); break;
+                case 'P': piece_set(&board->white[P++], file, rank); break;
+
+                default: exception("invalid FEN string", __FILE__, __LINE__);
+            }
+            ++file;
+        }
+
+        // small letters are used to denote the black pieces
+        // valid small letters: k (king), q (queen), r (rook), b (bishop), n (knight), p (pawn)
+        else if ('a' <= c && c <= 'z') {
+            switch(c) {
+                case 'k': piece_set(&board->black[k++], file, rank); break;
+                case 'q': piece_set(&board->black[q++], file, rank); break;
+                case 'r': piece_set(&board->black[r++], file, rank); break;
+                case 'b': piece_set(&board->black[b++], file, rank); break;
+                case 'n': piece_set(&board->black[n++], file, rank); break;
+                case 'p': piece_set(&board->black[p++], file, rank); break;
+
+                default: exception("invalid FEN string", __FILE__, __LINE__);
+            }
+            ++file;
+        }
+
+        // numbers are used to denote the number of continuous empty squares in a rank without pieces
+        else if ('1' <= c && c <= '8') {
+            file += c - '0';
+
+            // cannot have more empty spaces than size of the board
+            // 'h' + 1 is valid because the next character in the FEN string might be '/'
+            if (file > 'h' + 1)
+                exception("invalid FEN string", __FILE__, __LINE__);
+        }
+        else
+            exception("invalid FEN string", __FILE__, __LINE__);
     }
 
-    for (int i = 0; i < 1; ++i) {
-        board->white_queen[i].position = 0;
-        board->black_queen[i].position = 0;
-        board->white_queen[i].symbol = 'Q';
-        board->black_queen[i].symbol = 'q';
-    }
-
-    for (int i = 0; i < 2; ++i) {
-        board->white_rook[i].position = 0;
-        board->black_rook[i].position = 0;
-        board->white_rook[i].symbol = 'R';
-        board->black_rook[i].symbol = 'r';
-    }
-
-    for (int i = 0; i < 2; ++i) {
-        board->white_bishop[i].position = 0;
-        board->black_bishop[i].position = 0;
-        board->white_bishop[i].symbol = 'B';
-        board->black_bishop[i].symbol = 'b';
-    }
-
-    for (int i = 0; i < 2; ++i) {
-        board->white_knight[i].position = 0;
-        board->black_knight[i].position = 0;
-        board->white_knight[i].symbol = 'N';
-        board->black_knight[i].symbol = 'n';
-    }
-
-    for (int i = 0; i < 8; ++i) {
-        board->white_pawn[i].position = 0;
-        board->black_pawn[i].position = 0;
-        board->white_pawn[i].symbol = 'P';
-        board->black_pawn[i].symbol = 'p';
-    }
-
-    process_FEN(board, FEN);
+    // after iterating over the 8 ranks and 8 files, we must be at rank 0 and file 'i' (i.e. outside the board)
+    // if not the FEN string was invalid (sum of numbers + piece_count != 64)
+    printf("%c%c\n", file, rank);
+    if (file != 'i' && rank != '0')
+        exception("invalid FEN string", __FILE__, __LINE__);
 }
 
-void __display_board_set (char* pretty_board, piece* piece) {
-    int ctz = count_trailing_zeroes(piece->position);
-    pretty_board[ctz] = piece->symbol;
-}
-
-void display_board (board* board) {
+void display_board (board* board, bool is_white_perspective) {
+    // create and assign the chessboard with empty position values
     char pretty_board[64];
     for (int i = 0; i < 64; ++i)
         pretty_board[i] = '-';
     
-    for (int i = 0; i < 1; ++i) {
-        __display_board_set(pretty_board, &board->white_king[i]);
-        __display_board_set(pretty_board, &board->black_king[i]);
-    }
-
-    for (int i = 0; i < 1; ++i) {
-        __display_board_set(pretty_board, &board->white_queen[i]);
-        __display_board_set(pretty_board, &board->black_queen[i]);
-    }
-
-    for (int i = 0; i < 2; ++i) {
-        __display_board_set(pretty_board, &board->white_rook[i]);
-        __display_board_set(pretty_board, &board->black_rook[i]);
-    }
-
-    for (int i = 0; i < 2; ++i) {
-        __display_board_set(pretty_board, &board->white_bishop[i]);
-        __display_board_set(pretty_board, &board->black_bishop[i]);
-    }
-
-    for (int i = 0; i < 2; ++i) {
-        __display_board_set(pretty_board, &board->white_knight[i]);
-        __display_board_set(pretty_board, &board->black_knight[i]);
+    // place the pieces
+    for (int i = 0; i < 16; ++i) {
+        __place_piece(pretty_board, &board->white[i]);
+        __place_piece(pretty_board, &board->black[i]);
     }
 
     for (int i = 0; i < 8; ++i) {
-        __display_board_set(pretty_board, &board->white_pawn[i]);
-        __display_board_set(pretty_board, &board->black_pawn[i]);
+        for (int j = 0; j < 8; ++j) {
+            int index;
+            
+            if (is_white_perspective)
+                index = 8 * i + j;
+            else
+                index = 8 * (8 - i - 1) + (8 - j - 1);
+            printf("%c ", pretty_board[index]);
+        }
+        printf("\n");
     }
+}
 
-    for (int i = 0; i < 64; ++i) {
-        printf("%c ", pretty_board[i]);
-        if ((i + 1) % 8 == 0)
-            printf("\n");
-    }
+int __count_trailing_zeroes (position position) {
+    int ctz = 0;
+    for (int bit = 0; bit < 64; ++bit, ++ctz)
+        if (position & (1ull << bit))
+            break;
+    return ctz;
+}
+
+void __place_piece (char* pretty_board, piece* piece) {
+    int ctz = __count_trailing_zeroes(piece->position);
+    pretty_board[ctz] = piece->symbol;
 }
 
 #endif
