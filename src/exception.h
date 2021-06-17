@@ -1,5 +1,5 @@
-#ifndef chess_exceptions_h
-#define chess_exceptions_h
+#ifndef chess_exception_h
+#define chess_exception_h
 
 #include "stdio.h"
 #include "stdlib.h"

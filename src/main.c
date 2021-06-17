@@ -1,18 +1,14 @@
 #include "stdio.h"
-#include "stdbool.h"
 
-#include "board.h"
+#include "chess.h"
 
 int main (int argc, char* argv[]) {
-    // const char* FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
-    board board;
-    board_constructor(&board, argv[1]);
-    
-    printf("\nwhite:\n");
-    display_board(&board, true);
-    printf("\nblack\n");
-    display_board(&board, false);
+    struct chess chess;
+    chess_constructor(&chess);
+    set_board_position(&chess, argv[1]);
+    display_board(&chess.board, true);
 
     return 0;
 }
