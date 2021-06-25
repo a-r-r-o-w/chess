@@ -9,6 +9,8 @@ int main (int argc, char* argv[]) {
     chess_constructor(&chess);
     set_board_position(&chess, argv[1]);
     display_board(&chess.board, true);
+    puts("");
+    display_info(&chess);
 
     return 0;
 }

@@ -8,7 +8,10 @@
 #include "board.h"
 
 void chess_constructor (struct chess*);
+
 void set_board_position (struct chess*, const char*);
+
+void display_info (struct chess* chess);
 
 // FEN parsing helper functions
 
@@ -41,10 +44,55 @@ struct chess {
 
 void chess_constructor (struct chess* chess) {
     board_constructor(&chess->board);
+
+    chess->is_white_turn = false;
+    chess->white_kingside_castle = false;
+    chess->black_kingside_castle = false;
+    chess->white_queenside_castle = false;
+    chess->black_queenside_castle = false;
+
+    chess->en_passant_target = -1;
+
+    chess->halfmoves = 0;
+    chess->fullmoves = 0;
 }
 
 void set_board_position (struct chess* chess, const char* FEN) {
     parse_FEN(chess, FEN);
+}
+
+void display_info (struct chess* chess) {
+    char target [2];
+    target[0] = chess->en_passant_target % 8 + 'a';
+    target[1] = chess->en_passant_target / 8 + '1';
+
+    const char* info_headings[7] = {
+        "white_kingside_castle",
+        "black_kingside_castle",
+        "white_queenside_castle",
+        "black_queenside_castle",
+        "en_passant_target",
+        "halfmoves",
+        "fullmoves"
+    };
+
+    int field_length = 0;
+
+    for (int i = 0; i < 7; ++i) {
+        int len = 0;
+        for (int j = 0; info_headings[i][j] != '\0'; ++j)
+            ++len;
+        if (len > field_length)
+            field_length = len;
+    }
+
+    printf("%*s: %s\n", field_length, "white_kingside_castle" , chess->white_kingside_castle   ? "true" : "false");
+    printf("%*s: %s\n", field_length, "black_kingside_castle" , chess->black_kingside_castle   ? "true" : "false");
+    printf("%*s: %s\n", field_length, "white_queenside_castle", chess->white_queenside_castle  ? "true" : "false");
+    printf("%*s: %s\n", field_length, "black_queenside_castle", chess->black_queenside_castle  ? "true" : "false");
+    printf("%*s: %s\n", field_length, "en_passant_target"     , chess->en_passant_target == -1 ? "-1" : target);
+    printf("%*s: %d\n", field_length, "halfmoves"             , chess->halfmoves);
+    printf("%*s: %d\n", field_length, "fullmoves"             , chess->fullmoves);
 }
 
 // This does not validate the FEN string completely
