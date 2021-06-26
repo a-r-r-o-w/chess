@@ -26,6 +26,9 @@ void __parse_FEN_fullmoves       (struct chess*, const char*);
 
 int __split (const char*, char*);
 
+bool __is_white_occupied (position);
+bool __is_black_occupied (position);
+
 struct chess {
     struct board board;
 
@@ -86,13 +89,13 @@ void display_info (struct chess* chess) {
             field_length = len;
     }
 
-    printf("%*s: %s\n", field_length, "white_kingside_castle" , chess->white_kingside_castle   ? "true" : "false");
-    printf("%*s: %s\n", field_length, "black_kingside_castle" , chess->black_kingside_castle   ? "true" : "false");
-    printf("%*s: %s\n", field_length, "white_queenside_castle", chess->white_queenside_castle  ? "true" : "false");
-    printf("%*s: %s\n", field_length, "black_queenside_castle", chess->black_queenside_castle  ? "true" : "false");
-    printf("%*s: %s\n", field_length, "en_passant_target"     , chess->en_passant_target == -1 ? "-1" : target);
-    printf("%*s: %d\n", field_length, "halfmoves"             , chess->halfmoves);
-    printf("%*s: %d\n", field_length, "fullmoves"             , chess->fullmoves);
+    printf("%*s: %s\n", field_length, info_headings[0], chess->white_kingside_castle   ? "true" : "false");
+    printf("%*s: %s\n", field_length, info_headings[1], chess->black_kingside_castle   ? "true" : "false");
+    printf("%*s: %s\n", field_length, info_headings[2], chess->white_queenside_castle  ? "true" : "false");
+    printf("%*s: %s\n", field_length, info_headings[3], chess->black_queenside_castle  ? "true" : "false");
+    printf("%*s: %s\n", field_length, info_headings[4], chess->en_passant_target == -1 ? "-1" : target);
+    printf("%*s: %d\n", field_length, info_headings[5], chess->halfmoves);
+    printf("%*s: %d\n", field_length, info_headings[6], chess->fullmoves);
 }
 
 // This does not validate the FEN string completely
@@ -161,8 +164,8 @@ void __parse_FEN_piece_placement (struct board* board, const char* FEN) {
     char file = 'a';
 
     // starting indices for each piece
-    int K = 0, Q = 1, R = 2, B = 4, N = 6, P = 8;
-    int k = 0, q = 1, r = 2, b = 4, n = 6, p = 8;
+    int W = 0;
+    int B = 0;
     int count = 0;
 
     for (int i = 0; FEN[i] != '\0'; ++i) {
@@ -182,12 +185,12 @@ void __parse_FEN_piece_placement (struct board* board, const char* FEN) {
         // valid capital letters: K (king), Q (queen), R (rook), B (bishop), N (knight), P (pawn)
         else if ('A' <= c && c <= 'Z') {
             switch(c) {
-                case 'K': set_piece_position(&board->white[K++], file, rank); break;
-                case 'Q': set_piece_position(&board->white[Q++], file, rank); break;
-                case 'R': set_piece_position(&board->white[R++], file, rank); break;
-                case 'B': set_piece_position(&board->white[B++], file, rank); break;
-                case 'N': set_piece_position(&board->white[N++], file, rank); break;
-                case 'P': set_piece_position(&board->white[P++], file, rank); break;
+                case 'K': set_piece(&board->white[W++], file, rank, white_king); break;
+                case 'Q': set_piece(&board->white[W++], file, rank, white_queen); break;
+                case 'R': set_piece(&board->white[W++], file, rank, white_rook); break;
+                case 'B': set_piece(&board->white[W++], file, rank, white_bishop); break;
+                case 'N': set_piece(&board->white[W++], file, rank, white_knight); break;
+                case 'P': set_piece(&board->white[W++], file, rank, white_pawn); break;
 
                 default: exception("invalid FEN string", __FILE__, __LINE__);
             }
@@ -199,12 +202,12 @@ void __parse_FEN_piece_placement (struct board* board, const char* FEN) {
         // valid small letters: k (king), q (queen), r (rook), b (bishop), n (knight), p (pawn)
         else if ('a' <= c && c <= 'z') {
             switch(c) {
-                case 'k': set_piece_position(&board->black[k++], file, rank); break;
-                case 'q': set_piece_position(&board->black[q++], file, rank); break;
-                case 'r': set_piece_position(&board->black[r++], file, rank); break;
-                case 'b': set_piece_position(&board->black[b++], file, rank); break;
-                case 'n': set_piece_position(&board->black[n++], file, rank); break;
-                case 'p': set_piece_position(&board->black[p++], file, rank); break;
+                case 'k': set_piece(&board->black[B++], file, rank, black_king); break;
+                case 'q': set_piece(&board->black[B++], file, rank, black_queen); break;
+                case 'r': set_piece(&board->black[B++], file, rank, black_rook); break;
+                case 'b': set_piece(&board->black[B++], file, rank, black_bishop); break;
+                case 'n': set_piece(&board->black[B++], file, rank, black_knight); break;
+                case 'p': set_piece(&board->black[B++], file, rank, black_pawn); break;
 
                 default: exception("invalid FEN string", __FILE__, __LINE__);
             }
@@ -229,6 +232,14 @@ void __parse_FEN_piece_placement (struct board* board, const char* FEN) {
     // sum of numbers/empty_spaces + piece_count should be 64
     if (count != 64)
         exception("invalid FEN string", __FILE__, __LINE__);
+    
+    for (int i = 0; i < 16; ++i) {
+        if (board->white[i].position != -1)
+            board->is_occupied[board->white[i].position] = +(i + 1);
+        if (board->black[i].position != -1)
+            board->is_occupied[board->black[i].position] = -(i + 1);
+
+    }
 }
 
 // sets active color
@@ -294,6 +305,14 @@ void __parse_FEN_fullmoves (struct chess* chess, const char* FEN) {
         chess->fullmoves *= 10;
         chess->fullmoves += FEN[i] - '0';
     }
+}
+
+bool __is_white_occupied (position position) {
+    return position > 0;
+}
+
+bool __is_black_occupied (position position) {
+    return position < 0;
 }
 
 #endif // chess_h
