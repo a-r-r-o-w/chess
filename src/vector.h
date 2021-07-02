@@ -6,7 +6,12 @@
 
 #include "exception.h"
 
-#define vector(T)                                                           \
+/**
+ * Macro based implementation of a dynamic array of arbitrary type
+ * similar to C++ std::vector
+ */
+
+#define vector_t(T)                                                         \
                                                                             \
 typedef struct {                                                            \
     T*   data;                                                              \
@@ -40,13 +45,13 @@ void vector_##T##_constructor (vector_##T* vec, int size, T value) {        \
         vec->reserved_size = p2;                                            \
     }                                                                       \
     else                                                                    \
-        exception("memory could not be allocated", __FILE__, __LINE__);     \
+        EXCEPTION("memory could not be allocated");                         \
 }                                                                           \
                                                                             \
 T vector_##T##_at (vector_##T* vec, int index) {                            \
     if (vec->size < index) {                                                \
         vector_##T##_destructor(vec);                                       \
-        exception("out of bounds", __FILE__, __LINE__);                     \
+        EXCEPTION("out of bounds");                                         \
     }                                                                       \
                                                                             \
     return vec->data[index];                                                \
@@ -55,7 +60,7 @@ T vector_##T##_at (vector_##T* vec, int index) {                            \
 void vector_##T##_set (vector_##T* vec, int index, T value) {               \
     if (vec->size < index) {                                                \
         vector_##T##_destructor(vec);                                       \
-        exception("out of bounds", __FILE__, __LINE__);                     \
+        EXCEPTION("out of bounds");                                         \
     }                                                                       \
                                                                             \
     vec->data[index] = value;                                               \
@@ -81,7 +86,7 @@ void vector_##T##_pushback (vector_##T* vec, T value) {                     \
         }                                                                   \
         else {                                                              \
             vector_##T##_destructor(vec);                                   \
-            exception("memory could not be allocated", __FILE__, __LINE__); \
+            EXCEPTION("memory could not be allocated");                     \
         }                                                                   \
     }                                                                       \
 }                                                                           \
@@ -89,7 +94,7 @@ void vector_##T##_pushback (vector_##T* vec, T value) {                     \
 T vector_##T##_popback (vector_##T* vec) {                                  \
     if (vec->size == 0) {                                                   \
         vector_##T##_destructor(vec);                                       \
-        exception("vector is empty", __FILE__, __LINE__);                   \
+        EXCEPTION("vector is empty");                                       \
     }                                                                       \
                                                                             \
     vec->size -= 1;                                                         \
@@ -102,8 +107,14 @@ const T* vector_##T##_getdata (vector_##T* vec) {                           \
                                                                             \
 void vector_##T##_destructor (vector_##T* vec) {                            \
     free(vec->data);                                                        \
+    vec->data = NULL;                                                       \
     vec->size = 0;                                                          \
     vec->reserved_size = 0;                                                 \
 }
+
+#define vector(type) vector_##type
+
+vector_t(int)
+vector_t(char)
 
 #endif
