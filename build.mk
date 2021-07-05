@@ -1,4 +1,4 @@
-CFLAGS = -Wall -std=c11 -I "include/" -I "src/" -I "src/gui/" -L "lib/" -lopengl32 -lglfw3 -lgdi32
+CFLAGS = -Wall -Wl,--stack,268435456 -std=c11 -I "include/" -I "src/" -I "src/gui/" -L "lib/" -lopengl32 -lglfw3 -lgdi32
 
 "build/main.exe": folder build/glad.o main.o build/stb.o
 	gcc "build/glad.o" "build/main.o" "build/stb.o" -o "build/main.exe" $(CFLAGS)

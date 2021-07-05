@@ -7,16 +7,36 @@
 #include "gui/texture.h"
 
 #include "chess/chess.h"
+#include "chess/move_generation.h"
 
-const int BoardWindow_Width  = 640;
-const int BoardWindow_Height = 640;
-const int padding      = 20;
-const int BoardWidth  = BoardWindow_Width  - 2 * padding;
-const int BoardHeight = BoardWindow_Height - 2 * padding;
-const int BoxHeight   = BoardHeight / 8;
-const int BoxWidth    = BoardWidth  / 8;
+const static int BoardWindow_Width  = 640;
+const static int BoardWindow_Height = 640;
+const static int padding     = 20;
+const static int BoardWidth  = BoardWindow_Width  - 2 * padding;
+const static int BoardHeight = BoardWindow_Height - 2 * padding;
+const static int BoxHeight   = BoardHeight / 8;
+const static int BoxWidth    = BoardWidth  / 8;
+static int selectedIndexX = -1;
+static int selectedIndexY = -1;
+static int selectedPieceIndex = -1;
 
-static GLfloat BoxColors[8][8][3];
+const static double trasparencyFactor = 0.6f;
+
+static double mouseX = 0;
+static double mouseY = 0;
+
+float OriginalColors[8][8][3];
+float BoxColors[8][8][3];
+
+static GLint u_Color;
+static GLint u_RowShift;
+static GLint u_ColShift;
+static GLint u_isTexture;
+
+static bool isOccupied[64];
+
+const static float highlightColor[] = {0.3f, 0.7f, 0.1f};
+const static float attackColor[] = {0.7f, 0.3f, 0.3f};
 
 #define AddPNG(x) [x] = "../resources/png/" #x ".png"
 
@@ -40,8 +60,15 @@ static const char* pngFiles[] = {
 void ChessGUI        (Chess*);
 void WindowSetup     (Renderer*);
 void GameLoop        (Renderer*, Chess*);
+
 void Window0_Update  (Window*, Chess*, VertexArray*, IndexBuffer*, ShaderProgram*, Texture[]);
-void Window0_Process (Window*);
+void Window0_Process (Window*, Chess*);
+
+void drawBoard  ();
+void drawPieces (Chess*, Texture[]);
+void drawSelectColor(Window*, Chess*);
+void drawMoves  (Window*, Chess*);
+void clearMoves (Window*, Chess*);
 
 /* Object types --------------------------------------------------------------------------- */
 
@@ -75,6 +102,13 @@ void WindowSetup (Renderer* renderer) {
 
 void GameLoop (Renderer* renderer, Chess* chess) {
 
+    for (int i = 0; i < 16; ++i) {
+        if (chess->m_White[i].m_Position != -1)
+            isOccupied[chess->m_White[i].m_Position] = true;
+        if (chess->m_Black[i].m_Position != -1)
+            isOccupied[chess->m_Black[i].m_Position] = true;
+    }
+
     GLfloat vertices[] = {
       // Box coordinates                                                                           Texture coordinates
         -BoardWindow_Width / 2 + padding           , BoardWindow_Height / 2 - padding            , 0.0f, 1.0f,
@@ -98,17 +132,19 @@ void GameLoop (Renderer* renderer, Chess* chess) {
     for (int i = 0; i < 8; ++i) for (int j = 0; j < 8; ++j) {
         int parity = (i + j) % 2;
         if (parity) {
-            BoxColors[i][j][0] = 128.0f;
-            BoxColors[i][j][1] = 80.0f;
-            BoxColors[i][j][2] = 20.0f;
+            OriginalColors[i][j][0] = 128.0f;
+            OriginalColors[i][j][1] = 80.0f;
+            OriginalColors[i][j][2] = 20.0f;
         }
         else {
-            BoxColors[i][j][0] = 224.0f;
-            BoxColors[i][j][1] = 224.0f;
-            BoxColors[i][j][2] = 224.0f;
+            OriginalColors[i][j][0] = 224.0f;
+            OriginalColors[i][j][1] = 224.0f;
+            OriginalColors[i][j][2] = 224.0f;
         }
-        for (int k = 0; k < 3; ++k)
-            BoxColors[i][j][k] /= max_RGBAValue;
+        for (int k = 0; k < 3; ++k) {
+            OriginalColors[i][j][k] /= max_RGBAValue;
+            BoxColors[i][j][k] = OriginalColors[i][j][k];
+        }
     }
 
     Window_Activate(&renderer->m_Windows.data[0]);
@@ -147,10 +183,11 @@ void GameLoop (Renderer* renderer, Chess* chess) {
     Texture textures[12];
     for (int i = 0; i < 12; ++i)
         Texture_Constructor(&textures[i], pngFiles[i]);
-
-    // Texture_Bind(&textures[8], 0);
-    // GLint u_Texture = glGetUniformLocation(program.m_ID, "u_Texture");
-    // glUniform1i(u_Texture, 0);
+    
+    GL_CALL(u_Color     = glGetUniformLocation(program.m_ID, "u_Color"));
+    GL_CALL(u_RowShift  = glGetUniformLocation(program.m_ID, "u_RowShift"));
+    GL_CALL(u_ColShift  = glGetUniformLocation(program.m_ID, "u_ColShift"));
+    GL_CALL(u_isTexture = glGetUniformLocation(program.m_ID, "u_isTexture"));
 
     while (true) {
         bool isWindowClosed = false;
@@ -172,7 +209,7 @@ void GameLoop (Renderer* renderer, Chess* chess) {
         Window* window0 = &renderer->m_Windows.data[0];
         Window_Activate(window0);
         Window0_Update(window0, chess, &vao, &ibo, &program, textures);
-        Window0_Process(window0);
+        Window0_Process(window0, chess);
 
         for (int i = 0; i < renderer->m_Windows.size; ++i) {
             Window* window = &renderer->m_Windows.data[i];
@@ -194,11 +231,18 @@ void Window0_Update (Window* window, Chess* chess, VertexArray* vao, IndexBuffer
     VertexArray_Bind(vao);
     IndexBuffer_Bind(ibo);
 
-    GL_CALL(GLint u_Color    = glGetUniformLocation(program->m_ID, "u_Color"));
-    GL_CALL(GLint u_RowShift = glGetUniformLocation(program->m_ID, "u_RowShift"));
-    GL_CALL(GLint u_ColShift = glGetUniformLocation(program->m_ID, "u_ColShift"));
-    GL_CALL(GLint is_tex = glGetUniformLocation(program->m_ID, "u_isTexture"));
+    drawBoard();
+    drawPieces(chess, textures);
+}
 
+void Window0_Process (Window* window, Chess* chess) {
+    if (glfwGetKey(window->m_Window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window->m_Window, true);
+    
+    drawSelectColor(window, chess);
+}
+
+void drawBoard () {
     for (int i = 0; i < 8; ++i) for (int j = 0; j < 8; ++j) {
         float* color = BoxColors[i][j];
         
@@ -208,39 +252,197 @@ void Window0_Update (Window* window, Chess* chess, VertexArray* vao, IndexBuffer
 
         GL_CALL(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL));
     }
+}
 
+void drawPieces (Chess* chess, Texture textures[]) {
     for (int i = 0; i < 16; ++i) {
-        if (chess->m_White[i].m_Position != -1) {
-            Texture_Bind(&textures[chess->m_White[i].m_Type], 0);
-            int rank = chess->m_White[i].m_Position / 8;
-            int file = chess->m_White[i].m_Position % 8;
-            GL_CALL(glUniform1f(u_RowShift, (float)file * BoxWidth  / (BoardWindow_Width  / 2.0f)));
-            GL_CALL(glUniform1f(u_ColShift, (float)rank * BoxHeight / (BoardWindow_Height / 2.0f)));
-            glUniform1i(is_tex, true);
-            GL_CALL(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL));
-            glUniform1i(is_tex, false);
-            Texture_Unbind(&textures[chess->m_White[i].m_Type]);
-        }
+        Piece* piece = &chess->m_White[i];
+
+        if (piece->m_Position == -1)
+            continue;
+        
+        int rank = piece->m_Position / 8;
+        int file = piece->m_Position % 8;
+        
+        Texture_Bind(&textures[piece->m_Type], 0);
+
+        GL_CALL(glUniform1f(u_RowShift, (float)file * BoxWidth  / (BoardWindow_Width  / 2.0f)));
+        GL_CALL(glUniform1f(u_ColShift, (float)rank * BoxHeight / (BoardWindow_Height / 2.0f)));
+        GL_CALL(glUniform1i(u_isTexture, true));
+        GL_CALL(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL));
+        GL_CALL(glUniform1i(u_isTexture, false));
+        
+        Texture_Unbind(&textures[piece->m_Type]);
     }
 
     for (int i = 0; i < 16; ++i) {
-        if (chess->m_Black[i].m_Position != -1) {
-            Texture_Bind(&textures[chess->m_Black[i].m_Type], 0);
-            int rank = chess->m_Black[i].m_Position / 8;
-            int file = chess->m_Black[i].m_Position % 8;
-            GL_CALL(glUniform1f(u_RowShift, (float)file * BoxWidth  / (BoardWindow_Width  / 2.0f)));
-            GL_CALL(glUniform1f(u_ColShift, (float)rank * BoxHeight / (BoardWindow_Height / 2.0f)));
-            glUniform1i(is_tex, true);
-            GL_CALL(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL));
-            glUniform1i(is_tex, false);
-            Texture_Unbind(&textures[chess->m_Black[i].m_Type]);
-        }
+        Piece* piece = &chess->m_Black[i];
+
+        if (piece->m_Position == -1)
+            continue;
+        
+        int rank = piece->m_Position / 8;
+        int file = piece->m_Position % 8;
+        
+        Texture_Bind(&textures[piece->m_Type], 0);
+
+        GL_CALL(glUniform1f(u_RowShift, (float)file * BoxWidth  / (BoardWindow_Width  / 2.0f)));
+        GL_CALL(glUniform1f(u_ColShift, (float)rank * BoxHeight / (BoardWindow_Height / 2.0f)));
+        GL_CALL(glUniform1i(u_isTexture, true));
+        GL_CALL(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL));
+        GL_CALL(glUniform1i(u_isTexture, false));
+        
+        Texture_Unbind(&textures[piece->m_Type]);
     }
 }
 
-void Window0_Process (Window* window) {
-    if (glfwGetKey(window->m_Window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window->m_Window, true);
+void drawSelectColor (Window* window, Chess* chess) {
+    static int oldClickState = GLFW_RELEASE;
+    static int old_mX = -1;
+    static int old_mY = -1;
+
+    int newClickState = glfwGetMouseButton(window->m_Window, GLFW_MOUSE_BUTTON_LEFT);
+
+    if (newClickState == GLFW_RELEASE && oldClickState == GLFW_PRESS) {
+        glfwGetCursorPos(window->m_Window, &mouseX, &mouseY);
+
+        if (mouseX >= padding &&
+            mouseY >= padding &&
+            mouseX < BoardWindow_Width - padding &&
+            mouseY < BoardWindow_Height - padding) {
+        
+            int mX = (mouseY - padding) / BoxHeight;
+            int mY = (mouseX - padding) / BoxWidth;
+
+            if (!isOccupied[8 * mX + mY]) {
+                oldClickState = GLFW_RELEASE;
+                for (int i = 0; i < 3; ++i)
+                    BoxColors[old_mX][old_mY][i] = OriginalColors[old_mX][old_mY][i];
+                old_mX = -1;
+                old_mY = -1;
+                selectedIndexX = -1;
+                selectedIndexY = -1;
+                selectedPieceIndex = -1;
+                return;
+            }
+
+            if (old_mX == mX && old_mY == mY) {
+                oldClickState = GLFW_RELEASE;
+                return;
+            }
+
+            if (old_mX == -1 && old_mY == -1) {
+                old_mX = mX;
+                old_mY = mY;
+                selectedIndexX = mX;
+                selectedIndexY = mY;
+                selectedPieceIndex = indexify(mY + 'a', 8 - mX - 1 + '1');
+                drawMoves(window, chess);
+
+                for (int i = 0; i < 3; ++i)
+                    BoxColors[mX][mY][i] = trasparencyFactor * BoxColors[mX][mY][i] + (1 - trasparencyFactor) * highlightColor[i];
+            }
+            else {
+                for (int i = 0; i < 3; ++i) {
+                    BoxColors[old_mX][old_mY][i] = OriginalColors[old_mX][old_mY][i];
+                    BoxColors[mX][mY][i] = trasparencyFactor * BoxColors[mX][mY][i] + (1 - trasparencyFactor) * highlightColor[i];
+                }
+
+                old_mX = mX;
+                old_mY = mY;
+                selectedIndexX = mX;
+                selectedIndexY = mY;
+                clearMoves(window, chess);
+                selectedPieceIndex = indexify(mY + 'a', 8 - mX - 1 + '1');
+                drawMoves(window, chess);
+            }
+        }
+        else {
+            if (old_mX == -1 || old_mY == -1)
+                return;
+            
+            for (int i = 0; i < 3; ++i)
+                BoxColors[old_mX][old_mY][i] = OriginalColors[old_mX][old_mY][i];
+            old_mX = -1;
+            old_mY = -1;
+            selectedIndexX = -1;
+            selectedIndexY = -1;
+            clearMoves(window, chess);
+            selectedPieceIndex = -1;
+        }
+    }
+
+    oldClickState = newClickState;
+}
+
+void drawMoves (Window* window, Chess* chess) {
+    Piece* selectedPiece = NULL;
+    int count = 0;
+
+    for (int i = 0; i < 16; ++i)
+        if (chess->m_White[i].m_Position == selectedPieceIndex) {
+            selectedPiece = &chess->m_White[i];
+            ++count;
+        }
+    
+    for (int i = 0; i < 16; ++i)
+        if (chess->m_Black[i].m_Position == selectedPieceIndex) {
+            selectedPiece = &chess->m_Black[i];
+            ++count;
+        }
+    
+    if (count != 1)
+        EXCEPTION("None/Multiple pieces found at selected piece index");
+    
+    vector_int validMoves;
+    vector_int_constructor(&validMoves, 0, 0);
+
+    generateMoves(chess, selectedPiece, &validMoves);
+
+    for (int i = 0; i < validMoves.size; ++i) {
+        int file = validMoves.data[i] % 8;
+        int rank = validMoves.data[i] / 8;
+
+        for (int j = 0; j < 3; ++j)
+            BoxColors[rank][file][j] = attackColor[j];
+    }
+
+    vector_int_destructor(&validMoves);
+}
+
+void clearMoves (Window* window, Chess* chess) {
+    Piece* selectedPiece = NULL;
+    int count = 0;
+
+    for (int i = 0; i < 16; ++i)
+        if (chess->m_White[i].m_Position == selectedPieceIndex) {
+            selectedPiece = &chess->m_White[i];
+            ++count;
+        }
+    
+    for (int i = 0; i < 16; ++i)
+        if (chess->m_Black[i].m_Position == selectedPieceIndex) {
+            selectedPiece = &chess->m_Black[i];
+            ++count;
+        }
+    
+    if (count != 1)
+        EXCEPTION("None/Multiple pieces found at selected piece index");
+    
+    vector_int validMoves;
+    vector_int_constructor(&validMoves, 0, 0);
+
+    generateMoves(chess, selectedPiece, &validMoves);
+
+    for (int i = 0; i < validMoves.size; ++i) {
+        int file = validMoves.data[i] % 8;
+        int rank = validMoves.data[i] / 8;
+
+        for (int j = 0; j < 3; ++j)
+            BoxColors[rank][file][j] = OriginalColors[rank][file][j];
+    }
+
+    vector_int_destructor(&validMoves);
 }
 
 #endif // chess_gui_h
