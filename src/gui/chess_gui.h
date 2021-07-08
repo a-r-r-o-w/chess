@@ -1,3 +1,12 @@
+/**
+ * Chess
+ * 
+ * Written by:
+ *    Aryan V S         (PES1UG20CS083)
+ *    Aryansh Bhargavan (PES1UG20CS084)
+ *    Avanish Bhat      (PES1UG20CS092)
+ */
+
 #ifndef chess_gui_h
 #define chess_gui_h
 
@@ -66,7 +75,7 @@ void Window0_Process (Window*, Chess*);
 
 void drawBoard  ();
 void drawPieces (Chess*, Texture[]);
-void drawSelectColor(Window*, Chess*);
+void drawSelectColor (Window*, Chess*);
 void drawMoves  (Window*, Chess*);
 void clearMoves (Window*, Chess*);
 
@@ -317,6 +326,7 @@ void drawSelectColor (Window* window, Chess* chess) {
 
             if (isOccupied[newIndex]) {
                 if (old_mX == -1 && old_mY == -1) {
+                    
                     old_mX = mX;
                     old_mY = mY;
                     selectedPieceIndex = indexify(mY + 'a', 8 - mX - 1 + '1');
@@ -515,6 +525,22 @@ void clearMoves (Window* window, Chess* chess) {
             BoxColors[rank][file][j] = OriginalColors[rank][file][j];
     }
     vector_int_destructor(&movesCache);
+}
+
+bool checkTurn (Chess* chess, int position) {
+    if (chess->m_IsWhiteTurn) {
+        for (int i = 0; i < 16; ++i) {
+            if (chess->m_White[i].m_Position == position)
+                return true;
+        }
+    }
+    else {
+        for (int i = 0; i < 16; ++i) {
+            if (chess->m_Black[i].m_Position == position)
+                return true;
+        }
+    }
+    return false;
 }
 
 #endif // chess_gui_h

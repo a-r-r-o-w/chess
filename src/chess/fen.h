@@ -1,4 +1,13 @@
 #ifndef chess_fen_h
+/**
+ * Chess
+ * 
+ * Written by:
+ *    Aryan V S         (PES1UG20CS083)
+ *    Aryansh Bhargavan (PES1UG20CS084)
+ *    Avanish Bhat      (PES1UG20CS092)
+ */
+
 #define chess_fen_h
 
 #include "exception.h"

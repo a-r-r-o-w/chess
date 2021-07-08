@@ -1,3 +1,12 @@
+/**
+ * Chess
+ * 
+ * Written by:
+ *    Aryan V S         (PES1UG20CS083)
+ *    Aryansh Bhargavan (PES1UG20CS084)
+ *    Avanish Bhat      (PES1UG20CS092)
+ */
+
 #ifndef chess_move_generation_h
 #define chess_move_gereration_h
 

@@ -1,3 +1,12 @@
+/**
+ * Chess
+ * 
+ * Written by:
+ *    Aryan V S         (PES1UG20CS083)
+ *    Aryansh Bhargavan (PES1UG20CS084)
+ *    Avanish Bhat      (PES1UG20CS092)
+ */
+
 #include "stdio.h"
 
 #include "chess/chess.h"
@@ -5,28 +14,30 @@
 #include "gui/chess_gui.h"
 
 int main (int argc, char* argv[]) {
+    const char* beginningPosition = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
     Chess chess;
     Chess_Constructor(&chess);
-    ParseFEN(&chess, "rnbqkbnr/ppp2ppp/4p3/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3");
+
+    ParseFEN(&chess, beginningPosition);
+
+    system("cls");
+
+    printf("Chess\n"
+           "\n"
+           "Written by:\n"
+           "  Aryan V S         (PES1UG20CS083)\n"
+           "  Aryansh Bhargavan (PES1UG20CS084)\n"
+           "  Avanish Bhat      (PES1UG20CS092)\n"
+           "\n"
+           "\n"
+           "Press any key to start GUI");
     
+    getchar();
+
+    system("cls");
+
     ChessGUI(&chess);
-
-    // Chess chess;
-    // Chess_Constructor(&chess);
-    // ParseFEN(&chess, argv[1]);
-
-    // for (int i = 0; i < 16; ++i) {
-    //     vector_int valid;
-    //     vector_int_constructor(&valid, 0, 0);
-
-    //     if (chess.m_White[i].m_Type == white_knight) {
-    //         generateKnightMoves(&chess, chess.m_White + i, &valid);
-    //         for (int j = 0; j < valid.size; ++j)
-    //             printf("%c%c\n", valid.data[j] % 8 + 'a', 7 - valid.data[j] / 8 + '1');
-    //     }
-
-    //     vector_int_destructor(&valid);
-    // }
 
     return 0;
 }

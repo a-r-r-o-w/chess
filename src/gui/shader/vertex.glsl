@@ -1,3 +1,12 @@
+/**
+ * Chess
+ * 
+ * Written by:
+ *    Aryan V S         (PES1UG20CS083)
+ *    Aryansh Bhargavan (PES1UG20CS084)
+ *    Avanish Bhat      (PES1UG20CS092)
+ */
+
 #version 330 core
 
 layout(location = 0) in vec2 VertexPosition;

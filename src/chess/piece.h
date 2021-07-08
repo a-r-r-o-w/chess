@@ -1,4 +1,13 @@
-#ifndef chess_piece_h
+/**
+ * Chess
+ * 
+ * Written by:
+ *    Aryan V S         (PES1UG20CS083)
+ *    Aryansh Bhargavan (PES1UG20CS084)
+ *    Avanish Bhat      (PES1UG20CS092)
+ */
+
+    #ifndef chess_piece_h
 #define chess_piece_h
 
 #include "stdbool.h"
