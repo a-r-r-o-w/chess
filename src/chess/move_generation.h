@@ -92,7 +92,7 @@ void generatePawnMoves_white (Chess* chess, Piece* piece, vector_int* moves) {
         int newPosition = piece->m_Position + direction[i];
         
         if ((i == 0 && !isOccupiedByWhite(chess, newPosition) && !isOccupiedByBlack(chess, newPosition)) ||
-            ((i == 1 || i == 2) && isOccupiedByBlack(chess, newPosition)))
+            ((i == 1 || i == 2) && (isOccupiedByBlack(chess, newPosition) || chess->m_enPassantTarget == newPosition)))
             vector_int_pushback(&testMoves, newPosition);
     }
 
@@ -136,7 +136,7 @@ void generatePawnMoves_black (Chess* chess, Piece* piece, vector_int* moves) {
         int newPosition = piece->m_Position + direction[i];
 
         if ((i == 0 && !isOccupiedByWhite(chess, newPosition) && !isOccupiedByBlack(chess, newPosition)) ||
-            ((i == 1 || i == 2) && isOccupiedByWhite(chess, newPosition)))
+            ((i == 1 || i == 2) && (isOccupiedByWhite(chess, newPosition) || chess->m_enPassantTarget == newPosition)))
             vector_int_pushback(&testMoves, newPosition);
     }
 
