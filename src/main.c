@@ -4,8 +4,6 @@
 #include "chess/fen.h"
 #include "gui/chess_gui.h"
 
-// #include "chess/move_generation.h"
-
 int main (int argc, char* argv[]) {
     Chess chess;
     Chess_Constructor(&chess);

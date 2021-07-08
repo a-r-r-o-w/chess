@@ -11,7 +11,8 @@ typedef struct Chess Chess;
 
 /* Function declarations ------------------------------------------------------------------ */
 
-void Chess_Constructor (Chess*);
+void Chess_Constructor     (Chess*);
+void Chess_CopyConstructor (Chess*, Chess*);
 
 /* Object types --------------------------------------------------------------------------- */
 
@@ -47,6 +48,21 @@ void Chess_Constructor (Chess* chess) {
     chess->m_enPassantTarget = -1;
     chess->m_halfMoves       = 0;
     chess->m_fullMoves       = 0;
+}
+
+void Chess_CopyConstructor (Chess* lhs, Chess* rhs) {
+    for (int i = 0; i < 16; ++i) {
+        lhs->m_White[i] = rhs->m_White[i];
+        lhs->m_Black[i] = rhs->m_Black[i];
+    }
+    lhs->m_IsWhiteTurn     = rhs->m_IsWhiteTurn;
+    lhs->m_CanWhiteCastleK = rhs->m_CanWhiteCastleK;
+    lhs->m_CanWhiteCastleQ = rhs->m_CanWhiteCastleQ;
+    lhs->m_CanBlackCastleK = rhs->m_CanBlackCastleK;
+    lhs->m_CanBlackCastleQ = rhs->m_CanBlackCastleQ;
+    lhs->m_enPassantTarget = rhs->m_enPassantTarget;
+    lhs->m_halfMoves       = rhs->m_halfMoves;
+    lhs->m_fullMoves       = rhs->m_fullMoves;
 }
 
 #endif // chess_h

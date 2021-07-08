@@ -16,8 +16,6 @@ const static int BoardWidth  = BoardWindow_Width  - 2 * padding;
 const static int BoardHeight = BoardWindow_Height - 2 * padding;
 const static int BoxHeight   = BoardHeight / 8;
 const static int BoxWidth    = BoardWidth  / 8;
-static int selectedIndexX = -1;
-static int selectedIndexY = -1;
 static int selectedPieceIndex = -1;
 
 const static double trasparencyFactor = 0.6f;
@@ -27,6 +25,8 @@ static double mouseY = 0;
 
 float OriginalColors[8][8][3];
 float BoxColors[8][8][3];
+
+vector_int movesCache;
 
 static GLint u_Color;
 static GLint u_RowShift;
@@ -96,12 +96,11 @@ void WindowSetup (Renderer* renderer) {
     const int yPos0 = (renderer->ScreenHeight - BoardWindow_Height) / 2;
 
     Renderer_CreateWindow(renderer, BoardWindow_Width, BoardWindow_Height, "Board");
-    Window_SetClearColor(&renderer->m_Windows.data[0], (int[]) { 128, 128, 128, 255 });
+    Window_SetClearColor(&renderer->m_Windows.data[0], (int[]) { 150, 140, 200, 255 });
     Window_SetPosition(&renderer->m_Windows.data[0], xPos0, yPos0);
 }
 
 void GameLoop (Renderer* renderer, Chess* chess) {
-
     for (int i = 0; i < 16; ++i) {
         if (chess->m_White[i].m_Position != -1)
             isOccupied[chess->m_White[i].m_Position] = true;
@@ -314,61 +313,162 @@ void drawSelectColor (Window* window, Chess* chess) {
             int mX = (mouseY - padding) / BoxHeight;
             int mY = (mouseX - padding) / BoxWidth;
 
-            if (!isOccupied[8 * mX + mY]) {
-                oldClickState = GLFW_RELEASE;
-                for (int i = 0; i < 3; ++i)
-                    BoxColors[old_mX][old_mY][i] = OriginalColors[old_mX][old_mY][i];
-                old_mX = -1;
-                old_mY = -1;
-                selectedIndexX = -1;
-                selectedIndexY = -1;
-                selectedPieceIndex = -1;
-                return;
-            }
+            int newIndex = 8 * mX + mY;
 
-            if (old_mX == mX && old_mY == mY) {
-                oldClickState = GLFW_RELEASE;
-                return;
-            }
+            if (isOccupied[newIndex]) {
+                if (old_mX == -1 && old_mY == -1) {
+                    old_mX = mX;
+                    old_mY = mY;
+                    selectedPieceIndex = indexify(mY + 'a', 8 - mX - 1 + '1');
 
-            if (old_mX == -1 && old_mY == -1) {
-                old_mX = mX;
-                old_mY = mY;
-                selectedIndexX = mX;
-                selectedIndexY = mY;
-                selectedPieceIndex = indexify(mY + 'a', 8 - mX - 1 + '1');
-                drawMoves(window, chess);
+                    for (int i = 0; i < 3; ++i)
+                        BoxColors[mX][mY][i] = trasparencyFactor * BoxColors[mX][mY][i] + (1 - trasparencyFactor) * highlightColor[i];
+                    
+                    drawMoves(window, chess);
+                }
+                else if (old_mX == mX && old_mY == mY) {
+                    oldClickState = GLFW_RELEASE;
+                    return;
+                }
+                else {
+                    for (int i = 0; i < 3; ++i) {
+                        BoxColors[old_mX][old_mY][i] = OriginalColors[old_mX][old_mY][i];
+                        BoxColors[mX][mY][i] = trasparencyFactor * BoxColors[mX][mY][i] + (1 - trasparencyFactor) * highlightColor[i];
+                    }
 
-                for (int i = 0; i < 3; ++i)
-                    BoxColors[mX][mY][i] = trasparencyFactor * BoxColors[mX][mY][i] + (1 - trasparencyFactor) * highlightColor[i];
+                    bool changed = false;
+                    for (int i = 0; i < movesCache.size; ++i) {
+                        if (newIndex == movesCache.data[i]) {
+                            for (int j = 0; j < 16; ++j) {
+                                if (chess->m_White[j].m_Position == selectedPieceIndex) {
+                                    isOccupied[selectedPieceIndex] = false;
+                                    chess->m_White[j].m_Position = newIndex;
+
+                                    if (isOccupied[newIndex]) {
+                                        bool captured = false;
+                                        for (int i = 0; i < 16; ++i) {
+                                            if (chess->m_Black[i].m_Position == newIndex) {
+                                                chess->m_Black[i].m_Position = -1;
+                                                captured = true;
+                                            }
+                                        }
+                                        if (!captured)
+                                            EXCEPTION("piece must have been captured");
+                                    }
+
+                                    isOccupied[newIndex] = true;
+                                    changed = true;
+                                    break;
+                                }
+                                if (chess->m_Black[j].m_Position == selectedPieceIndex) {
+                                    isOccupied[selectedPieceIndex] = false;
+                                    chess->m_Black[j].m_Position = newIndex;
+
+                                    if (isOccupied[newIndex]) {
+                                        bool captured = false;
+                                        for (int i = 0; i < 16; ++i) {
+                                            if (chess->m_White[i].m_Position == newIndex) {
+                                                chess->m_White[i].m_Position = -1;
+                                                captured = true;
+                                            }
+                                        }
+                                        if (!captured)
+                                            EXCEPTION("piece must have been captured");
+                                    }
+
+                                    isOccupied[newIndex] = true;
+                                    changed = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    clearMoves(window, chess);
+
+                    if (changed) {
+                        old_mX = -1;
+                        old_mY = -1;
+                        selectedPieceIndex = -1;
+                    }
+                    else {
+                        old_mX = mX;
+                        old_mY = mY;
+                        selectedPieceIndex = newIndex;
+                        drawMoves(window, chess);
+                    }
+                }
             }
             else {
-                for (int i = 0; i < 3; ++i) {
-                    BoxColors[old_mX][old_mY][i] = OriginalColors[old_mX][old_mY][i];
-                    BoxColors[mX][mY][i] = trasparencyFactor * BoxColors[mX][mY][i] + (1 - trasparencyFactor) * highlightColor[i];
+                if (old_mX == -1 && old_mY == -1) {
+                    oldClickState = GLFW_RELEASE;
+                    return;
                 }
+                else {
+                    for (int i = 0; i < 3; ++i)
+                        BoxColors[old_mX][old_mY][i] = OriginalColors[old_mX][old_mY][i];
+                    
+                    for (int i = 0; i < movesCache.size; ++i) {
+                        if (newIndex == movesCache.data[i]) {
+                            bool changed = false;
 
-                old_mX = mX;
-                old_mY = mY;
-                selectedIndexX = mX;
-                selectedIndexY = mY;
-                clearMoves(window, chess);
-                selectedPieceIndex = indexify(mY + 'a', 8 - mX - 1 + '1');
-                drawMoves(window, chess);
+                            for (int j = 0; j < 16; ++j) {
+                                if (chess->m_White[j].m_Position == selectedPieceIndex) {
+                                    isOccupied[selectedPieceIndex] = false;
+                                    chess->m_White[j].m_Position = newIndex;
+
+                                    if (isOccupied[newIndex]) {
+                                        bool captured = false;
+                                        for (int k = 0; k < 16; ++k) {
+                                            if (chess->m_Black[k].m_Position == newIndex) {
+                                                chess->m_Black[k].m_Position = -1;
+                                                captured = true;
+                                            }
+                                        }
+                                        if (!captured)
+                                            EXCEPTION("piece must have been captured");
+                                    }
+
+                                    isOccupied[newIndex] = true;
+                                    changed = true;
+
+                                    break;
+                                }
+                                if (chess->m_Black[j].m_Position == selectedPieceIndex) {
+                                    isOccupied[selectedPieceIndex] = false;
+                                    chess->m_Black[j].m_Position = newIndex;
+
+                                    if (isOccupied[newIndex]) {
+                                        bool captured = false;
+                                        for (int k = 0; k < 16; ++k) {
+                                            if (chess->m_White[k].m_Position == newIndex) {
+                                                chess->m_White[k].m_Position = -1;
+                                                captured = true;
+                                            }
+                                        }
+                                        if (!captured)
+                                            EXCEPTION("piece must have been captured");
+                                    }
+
+                                    isOccupied[newIndex] = true;
+                                    changed = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (!changed)
+                                EXCEPTION("piece position should change")
+                            break;
+                        }
+                    }
+
+                    oldClickState = GLFW_RELEASE;
+                    old_mX = -1;
+                    old_mY = -1;
+                    clearMoves(window, chess);
+                    selectedPieceIndex = -1;
+                }
             }
-        }
-        else {
-            if (old_mX == -1 || old_mY == -1)
-                return;
-            
-            for (int i = 0; i < 3; ++i)
-                BoxColors[old_mX][old_mY][i] = OriginalColors[old_mX][old_mY][i];
-            old_mX = -1;
-            old_mY = -1;
-            selectedIndexX = -1;
-            selectedIndexY = -1;
-            clearMoves(window, chess);
-            selectedPieceIndex = -1;
         }
     }
 
@@ -376,6 +476,8 @@ void drawSelectColor (Window* window, Chess* chess) {
 }
 
 void drawMoves (Window* window, Chess* chess) {
+    vector_int_constructor(&movesCache, 0, 0);
+
     Piece* selectedPiece = NULL;
     int count = 0;
 
@@ -390,59 +492,29 @@ void drawMoves (Window* window, Chess* chess) {
             selectedPiece = &chess->m_Black[i];
             ++count;
         }
-    
     if (count != 1)
         EXCEPTION("None/Multiple pieces found at selected piece index");
-    
-    vector_int validMoves;
-    vector_int_constructor(&validMoves, 0, 0);
 
-    generateMoves(chess, selectedPiece, &validMoves);
+    generateMoves(chess, selectedPiece, &movesCache);
 
-    for (int i = 0; i < validMoves.size; ++i) {
-        int file = validMoves.data[i] % 8;
-        int rank = validMoves.data[i] / 8;
+    for (int i = 0; i < movesCache.size; ++i) {
+        int file = movesCache.data[i] % 8;
+        int rank = movesCache.data[i] / 8;
 
         for (int j = 0; j < 3; ++j)
             BoxColors[rank][file][j] = attackColor[j];
     }
-
-    vector_int_destructor(&validMoves);
 }
 
 void clearMoves (Window* window, Chess* chess) {
-    Piece* selectedPiece = NULL;
-    int count = 0;
-
-    for (int i = 0; i < 16; ++i)
-        if (chess->m_White[i].m_Position == selectedPieceIndex) {
-            selectedPiece = &chess->m_White[i];
-            ++count;
-        }
-    
-    for (int i = 0; i < 16; ++i)
-        if (chess->m_Black[i].m_Position == selectedPieceIndex) {
-            selectedPiece = &chess->m_Black[i];
-            ++count;
-        }
-    
-    if (count != 1)
-        EXCEPTION("None/Multiple pieces found at selected piece index");
-    
-    vector_int validMoves;
-    vector_int_constructor(&validMoves, 0, 0);
-
-    generateMoves(chess, selectedPiece, &validMoves);
-
-    for (int i = 0; i < validMoves.size; ++i) {
-        int file = validMoves.data[i] % 8;
-        int rank = validMoves.data[i] / 8;
+    for (int i = 0; i < movesCache.size; ++i) {
+        int file = movesCache.data[i] % 8;
+        int rank = movesCache.data[i] / 8;
 
         for (int j = 0; j < 3; ++j)
             BoxColors[rank][file][j] = OriginalColors[rank][file][j];
     }
-
-    vector_int_destructor(&validMoves);
+    vector_int_destructor(&movesCache);
 }
 
 #endif // chess_gui_h
