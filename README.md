@@ -12,24 +12,4 @@ cd Chess
 make -f build.mk
 ```
 
-
-
 ![demo-gif](./resources/demo.gif)
-
-
-
-### Team:
-
-- Aryan V S (PES1UG20CS083)
-- Aryansh Bhargavan (PES1UG20CS084)
-- Avanish Bhat (PES1UG20CS092)
-
-****
-
-
-
-**This project is no longer continued. You might get it to run if you tried hard enough because back when we wrote the project, getting it to run on different platforms and writing "software" code wasn't our concern...** It was meant to be a one-and-done project that was written under time pressure of submission within deadlines. I, however, enjoy writing C code and working with OpenGL and have decided to pursue a few project ideas [here](https://github.com/a-r-r-o-w/opengl-projects). They're nothing serious - just something to do when I have nothing else in mind and am bored with my usual routine.
-
-
-
-_It worked when I tried it. Maybe the error is in your system :p ~ every programmer at some point in their life_
